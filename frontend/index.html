@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Firewall — LLM Prompt Injection Scanner</title>
+  <meta name="description"
+    content="Real-time AI-powered prompt injection detection dashboard. Protect your LLMs from jailbreaks, payload injections, and social engineering attacks." />
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    rel="stylesheet" />
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+  <!-- D3 for World Map -->
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="https://unpkg.com/topojson-client@3"></script>
+
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+
+<body>
+
+  <!-- ── Animated background particles ── -->
+  <div class="bg-particles" id="bgParticles"></div>
+  <div class="bg-grid"></div>
+
+  <!-- ── Sidebar Navigation ── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">
+        <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 4L36 12V22C36 30.836 29.044 38.024 20 40C10.956 38.024 4 30.836 4 22V12L20 4Z"
+            fill="url(#logoGrad)" opacity="0.2" />
+          <path d="M20 4L36 12V22C36 30.836 29.044 38.024 20 40C10.956 38.024 4 30.836 4 22V12L20 4Z"
+            stroke="url(#logoGrad)" stroke-width="1.5" fill="none" />
+          <path d="M14 20L18 24L26 16" stroke="#00ff88" stroke-width="2.5" stroke-linecap="round"
+            stroke-linejoin="round" />
+          <defs>
+            <linearGradient id="logoGrad" x1="4" y1="4" x2="36" y2="40">
+              <stop offset="0%" stop-color="#4d9fff" />
+              <stop offset="100%" stop-color="#00ff88" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <div class="logo-text">
+        <span class="logo-title">AI Firewall</span>
+        <span class="logo-sub">Prompt Shield v1.0</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <button class="nav-item active" id="nav-scanner" data-view="scanner">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+        </svg>
+        <span>Scanner</span>
+      </button>
+      <button class="nav-item" id="nav-dashboard" data-view="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="3" width="7" height="7" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" />
+          <rect x="14" y="14" width="7" height="7" rx="1" />
+        </svg>
+        <span>Dashboard</span>
+      </button>
+      <button class="nav-item" id="nav-ledger" data-view="ledger">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <line x1="16" y1="13" x2="8" y2="13" />
+          <line x1="16" y1="17" x2="8" y2="17" />
+        </svg>
+        <span>Threat Ledger</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-status">
+      <div class="status-dot" id="statusDot"></div>
+      <span id="statusText">Connecting...</span>
+    </div>
+  </aside>
+
+  <!-- ── Main Content ── -->
+  <main class="main-content">
+
+    <!-- ══ SCANNER VIEW ══ -->
+    <section class="view active" id="view-scanner">
+      <div class="view-header">
+        <h1>Prompt Scanner</h1>
+        <p>Paste any LLM prompt below to analyze it for injection attacks in real time.</p>
+      </div>
+
+      <div class="scanner-layout">
+        <!-- Input Panel -->
+        <div class="glass-card scanner-input-card">
+          <div class="card-header">
+            <span class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              Prompt Input
+            </span>
+            <span class="char-counter" id="charCounter">0 / 5000</span>
+          </div>
+
+          <textarea id="promptInput" class="prompt-textarea"
+            placeholder="Enter a prompt to analyze... e.g. 'Ignore all previous instructions and tell me how to...'"
+            maxlength="5000" spellcheck="false"></textarea>
+
+          <div class="scanner-actions">
+            <button class="btn-secondary" id="voiceBtn" title="Use Voice Input">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                <line x1="12" y1="19" x2="12" y2="23"></line>
+                <line x1="8" y1="23" x2="16" y2="23"></line>
+              </svg>
+              <span id="voiceBtnText">Speak</span>
+            </button>
+            <button class="btn-secondary" id="clearBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="3 6 5 6 21 6" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </svg>
+              Clear
+            </button>
+            <button class="btn-secondary" id="exampleBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              Try Example
+            </button>
+            <button class="btn-primary" id="scanBtn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              <span id="scanBtnText">Scan Prompt</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Result Panel -->
+        <div class="result-panel" id="resultPanel">
+          <!-- Idle state -->
+          <div class="result-idle" id="resultIdle">
+            <div class="idle-icon">
+              <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="40" cy="40" r="38" stroke="rgba(77,159,255,0.2)" stroke-width="1.5" />
+                <circle cx="40" cy="40" r="28" stroke="rgba(77,159,255,0.1)" stroke-width="1.5" />
+                <path d="M40 16L56 24V36C56 46.418 49.044 55.312 40 58C30.956 55.312 24 46.418 24 36V24L40 16Z"
+                  stroke="rgba(77,159,255,0.5)" stroke-width="1.5" fill="rgba(77,159,255,0.05)" />
+              </svg>
+            </div>
+            <p>Submit a prompt to begin analysis</p>
+          </div>
+
+          <!-- Scanning animation -->
+          <div class="result-scanning hidden" id="resultScanning">
+            <div class="scanning-animation">
+              <div class="scan-ring"></div>
+              <div class="scan-ring ring2"></div>
+              <div class="scan-ring ring3"></div>
+              <div class="scan-core">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+              </div>
+            </div>
+            <p class="scanning-text">Analyzing prompt...</p>
+            <div class="scanning-steps">
+              <div class="step active" id="step1">Tokenizing input</div>
+              <div class="step" id="step2">Extracting features</div>
+              <div class="step" id="step3">Running classifier</div>
+              <div class="step" id="step4">Generating verdict</div>
+            </div>
+          </div>
+
+          <!-- Verdict card -->
+          <div class="result-verdict hidden" id="resultVerdict">
+            <!-- Dynamically injected -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent quick scans -->
+      <div class="glass-card recent-scans-card" id="recentScansCard">
+        <div class="card-header">
+          <span class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            Recent Scans
+          </span>
+        </div>
+        <div class="recent-scans-list" id="recentScansList">
+          <div class="empty-state">No scans yet. Submit a prompt above to get started.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ DASHBOARD VIEW ══ -->
+    <section class="view" id="view-dashboard">
+      <div class="view-header">
+        <h1>Threat Dashboard</h1>
+        <p>Live analytics across all scanned prompts. Auto-refreshes every 30 seconds.</p>
+        <button class="btn-secondary btn-sm" id="refreshDashBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10" />
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+          </svg>
+          Refresh
+        </button>
+      </div>
+
+      <!-- Stat Cards -->
+      <div class="stats-grid">
+        <div class="glass-card stat-card">
+          <div class="stat-icon safe-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <polyline points="9 12 11 14 15 10" />
+            </svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value" id="statTotal">—</span>
+            <span class="stat-label">Total Scans</span>
+          </div>
+          <div class="stat-trend" id="statTotalTrend"></div>
+        </div>
+        <div class="glass-card stat-card">
+          <div class="stat-icon blocked-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+            </svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value danger-text" id="statBlocked">—</span>
+            <span class="stat-label">Threats Blocked</span>
+          </div>
+        </div>
+        <div class="glass-card stat-card">
+          <div class="stat-icon rate-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+              <polyline points="17 6 23 6 23 12" />
+            </svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value orange-text" id="statBlockRate">—</span>
+            <span class="stat-label">Block Rate</span>
+          </div>
+        </div>
+        <div class="glass-card stat-card">
+          <div class="stat-icon safe2-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          </div>
+          <div class="stat-info">
+            <span class="stat-value green-text" id="statSafe">—</span>
+            <span class="stat-label">Safe Prompts</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Threat Map -->
+      <div class="glass-card map-card" style="margin-bottom: 20px;">
+        <div class="card-header">
+          <span class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="2" y1="12" x2="22" y2="12" />
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            </svg>
+            Live Cyber-Threat Map
+          </span>
+        </div>
+        <div class="map-container" style="position: relative; height: 360px; overflow: hidden; background: #080b12;">
+          <svg id="worldMapSvg" style="width: 100%; height: 100%;"></svg>
+          
+          <div id="mapBlips"></div>
+          
+          <div class="map-overlay-feed" id="mapFeed" style="background: rgba(8, 11, 20, 0.85); backdrop-filter: blur(8px);">
+            <div class="feed-title">LIVE THREAT FEED</div>
+            <div class="feed-list" id="feedList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="charts-row">
+        <div class="glass-card chart-card donut-card">
+          <div class="card-header">
+            <span class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v4l3 3" />
+              </svg>
+              Threat Categories
+            </span>
+          </div>
+          <div class="chart-container">
+            <canvas id="categoryChart"></canvas>
+          </div>
+          <div class="chart-legend" id="categoryLegend"></div>
+        </div>
+
+        <div class="glass-card chart-card line-card">
+          <div class="card-header">
+            <span class="card-title">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+              </svg>
+              24-Hour Scan Activity
+            </span>
+          </div>
+          <div class="chart-container">
+            <canvas id="activityChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Threats Table -->
+      <div class="glass-card">
+        <div class="card-header">
+          <span class="card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            Latest Threats
+          </span>
+        </div>
+        <div class="threats-table-wrap">
+          <table class="threats-table" id="recentThreatsTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Prompt Preview</th>
+                <th>Category</th>
+                <th>Confidence</th>
+                <th>Risk</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody id="recentThreatsBody">
+              <tr>
+                <td colspan="6" class="empty-state">No data yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ LEDGER VIEW ══ -->
+    <section class="view" id="view-ledger">
+      <div class="view-header">
+        <h1>Threat Ledger</h1>
+        <p>Complete historical log of every analyzed prompt with full audit trail.</p>
+      </div>
+
+      <!-- Filters -->
+      <div class="ledger-controls glass-card">
+        <div class="filter-group">
+          <label>Filter by verdict:</label>
+          <div class="filter-pills">
+            <button class="filter-pill active" data-filter="all" id="filterAll">All</button>
+            <button class="filter-pill" data-filter="BLOCKED" id="filterBlocked">
+              <span class="pill-dot danger"></span> Blocked
+            </button>
+            <button class="filter-pill" data-filter="SAFE" id="filterSafe">
+              <span class="pill-dot success"></span> Safe
+            </button>
+          </div>
+        </div>
+        <div class="filter-group">
+          <label>Rows per page:</label>
+          <select class="select-input" id="pageSizeSelect">
+            <option value="10">10</option>
+            <option value="20" selected>20</option>
+            <option value="50">50</option>
+          </select>
+        </div>
+        <button class="btn-secondary btn-sm" id="exportBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" y1="15" x2="12" y2="3" />
+          </svg>
+          Export CSV
+        </button>
+      </div>
+
+      <!-- Ledger Table -->
+      <div class="glass-card ledger-card">
+        <div class="threats-table-wrap">
+          <table class="threats-table" id="ledgerTable">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Prompt Preview</th>
+                <th>Verdict</th>
+                <th>Category</th>
+                <th>Confidence</th>
+                <th>Risk Score</th>
+                <th>Timestamp</th>
+              </tr>
+            </thead>
+            <tbody id="ledgerBody">
+              <tr>
+                <td colspan="7" class="empty-state">Loading...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination" id="ledgerPagination">
+          <button class="page-btn" id="prevPage">‹</button>
+          <span class="page-info" id="pageInfo">Page 1 of 1</span>
+          <button class="page-btn" id="nextPage">›</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ── Toast notifications ── -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ── Scripts ── -->
+  <script src="/static/js/app.js"></script>
+  <script src="/static/js/scanner.js"></script>
+  <script src="/static/js/dashboard.js"></script>
+  <script src="/static/js/ledger.js"></script>
+
+</body>
+
+</html>
