@@ -92,3 +92,14 @@ If you add new datasets to the `data/` folder and want to harden the firewall:
 python -m backend.train_model
 ```
 This will run the full pipeline, execute cross-validation, output a learning curve, and save the updated `model.pkl`.
+
+---
+
+## 🔮 Future Improvements
+
+While the current TF-IDF + Logistic Regression model is highly effective and fast, there are several areas planned for future enhancement:
+
+1. **Transformer-Based Architecture:** Upgrading the core classification engine from TF-IDF/Logistic Regression to a fine-tuned, lightweight Transformer model (such as DistilBERT or RoBERTa). This will fundamentally improve the firewall's ability to understand deep semantic context, making it much harder to bypass using advanced context-switching or complex role-play scenarios.
+2. **Distributed Session Storage:** Migrating the in-memory `cachetools.TTLCache` rate-limiting and session management to a dedicated Redis instance to support horizontal scaling across multiple API workers.
+3. **Advanced Anomaly Detection:** Implementing unsupervised anomaly detection alongside the supervised classifier to catch entirely novel zero-day prompt injection structures before they are added to the training corpus.
+4. **Streaming API Responses:** Upgrading the chat interface to support WebSocket or SSE (Server-Sent Events) for real-time streaming of LLM tokens, while still running the firewall check asynchronously on the full input block.
