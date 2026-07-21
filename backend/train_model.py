@@ -234,6 +234,7 @@ def main():
                 sublinear_tf=True,
                 min_df=1,
                 analyzer="word",
+                token_pattern=r"(?u)\b\w\w+\b|[^\w\s]+",
             ),
         ),
         (

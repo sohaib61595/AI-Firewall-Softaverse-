@@ -16,6 +16,7 @@ from datetime import datetime
 from typing import Optional
 from dotenv import load_dotenv
 from openai import OpenAI
+from cachetools import TTLCache
 
 # Load environment variables from backend/.env
 env_path = os.path.join(os.path.dirname(__file__), ".env")
@@ -69,18 +70,30 @@ app.add_middleware(
 )
 
 # ─── Chatbot State ────────────────────────────────────────────────────────────
-# SESSIONS stores conversation history: { session_id: [{"role": "user"/"assistant", "content": "..."}] }
-SESSIONS = defaultdict(list)
-# RATE_LIMIT_STORE stores blocked attempts: { session_id: [timestamp1, timestamp2, ...] }
-RATE_LIMIT_STORE = defaultdict(list)
-RATE_LIMIT_WINDOW_SEC = 60
-RATE_LIMIT_MAX_BLOCKS = 3
+# SESSIONS stores conversation history: bounded by maxsize and ttl
+SESSIONS = TTLCache(maxsize=1000, ttl=3600)
 
-def is_rate_limited(session_id: str) -> bool:
-    now = time.time()
-    # Clean up old timestamps
-    RATE_LIMIT_STORE[session_id] = [ts for ts in RATE_LIMIT_STORE[session_id] if now - ts < RATE_LIMIT_WINDOW_SEC]
-    return len(RATE_LIMIT_STORE[session_id]) >= RATE_LIMIT_MAX_BLOCKS
+# RATE_LIMIT_STORE tracks blocks and normal requests
+RATE_LIMIT_STORE = TTLCache(maxsize=10000, ttl=60)
+RATE_LIMIT_MAX_BLOCKS = 3
+RATE_LIMIT_MAX_REQS = 10
+
+def check_rate_limits(session_id: str, is_block: bool = False) -> tuple[bool, str]:
+    if session_id not in RATE_LIMIT_STORE:
+        RATE_LIMIT_STORE[session_id] = {"blocks": 0, "reqs": 0}
+    
+    stats = RATE_LIMIT_STORE[session_id]
+    if is_block:
+        stats["blocks"] += 1
+    else:
+        stats["reqs"] += 1
+        
+    if stats["blocks"] >= RATE_LIMIT_MAX_BLOCKS:
+        return True, "blocked"
+    if stats["reqs"] > RATE_LIMIT_MAX_REQS:
+        return True, "rate_limited"
+        
+    return False, ""
 
 
 
@@ -143,10 +156,16 @@ async def chat_endpoint(request: ChatRequest):
     if not user_msg:
         raise HTTPException(status_code=400, detail="Message cannot be empty.")
 
-    # 1. Rate Limiting Check
-    if is_rate_limited(session_id):
+    # 1. Rate Limiting Check (Global)
+    is_limited, limit_reason = check_rate_limits(session_id, is_block=False)
+    if is_limited:
+        if limit_reason == "blocked":
+            msg = "You have been temporarily blocked due to repeated security violations. Please try again later."
+        else:
+            msg = "Rate limit exceeded. Please wait a minute before sending more messages."
+            
         return ChatResponse(
-            reply="You have been temporarily blocked due to repeated security violations. Please try again later.",
+            reply=msg,
             status="rate_limited",
             firewall_label="BLOCKED (RATE LIMIT)"
         )
@@ -167,7 +186,7 @@ async def chat_endpoint(request: ChatRequest):
         )
         
         # Record attempt for rate limiting
-        RATE_LIMIT_STORE[session_id].append(time.time())
+        check_rate_limits(session_id, is_block=True)
         
         return ChatResponse(
             reply="This message was flagged by our security filter and cannot be processed.",
@@ -187,6 +206,9 @@ async def chat_endpoint(request: ChatRequest):
         country="Unknown"
     )
 
+    if session_id not in SESSIONS:
+        SESSIONS[session_id] = []
+        
     history = SESSIONS[session_id]
     history.append({"role": "user", "content": user_msg})
     
@@ -207,7 +229,11 @@ async def chat_endpoint(request: ChatRequest):
             )
             bot_reply = response.choices[0].message.content
         except Exception as e:
-            bot_reply = f"[ERROR] Failed to communicate with LLM: {str(e)}"
+            error_msg = str(e)
+            if "429" in error_msg or "rate limit" in error_msg.lower():
+                bot_reply = "Rate limit exceeded. Please try again in a few moments."
+            else:
+                bot_reply = f"[ERROR] Failed to communicate with LLM: {error_msg}"
             
     history.append({"role": "assistant", "content": bot_reply})
     
@@ -231,6 +257,16 @@ async def history(
     """Return paginated scan history."""
     data = get_history(page=page, page_size=page_size, verdict_filter=verdict)
     return PaginatedHistory(**data)
+
+
+@app.delete("/api/history")
+async def clear_history_api():
+    from backend.database import clear_history
+    try:
+        clear_history()
+        return {"status": "success", "message": "History cleared"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/api/stats", response_model=StatsResponse)

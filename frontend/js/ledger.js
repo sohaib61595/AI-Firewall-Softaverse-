@@ -31,6 +31,21 @@ document.getElementById('nextPage').addEventListener('click', () => {
 
 document.getElementById('exportBtn').addEventListener('click', exportCSV);
 
+// ── Clear Ledger ──────────────────────────────────────────────
+document.getElementById('clearLedgerBtn').addEventListener('click', async () => {
+  if (confirm("Are you sure you want to completely clear the Threat Ledger? This cannot be undone.")) {
+    try {
+      const res = await fetch(`${API_BASE}/api/history`, { method: 'DELETE' });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      // Reload the ledger
+      loadLedger(1);
+    } catch (err) {
+      console.error("Failed to clear ledger:", err);
+      alert("Error clearing ledger. Is the server running?");
+    }
+  }
+});
+
 // ── Load Ledger ───────────────────────────────────────────────
 async function loadLedger(page = 1) {
   ledgerPage = page;

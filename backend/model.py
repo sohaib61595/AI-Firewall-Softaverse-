@@ -83,7 +83,50 @@ class FirewallModel:
         
         assert self._pipeline is not None, "Pipeline must be loaded"
 
-        # Get class probabilities
+        # Minimum confidence required to issue a BLOCK verdict.
+        # Below this threshold, the prompt is treated as SAFE to avoid
+        # false positives on casual conversation.
+        BLOCK_CONFIDENCE_THRESHOLD = 0.78
+
+        # --- SLIDING WINDOW DETECTION ---
+        WINDOW_SIZE = 50
+        STEP_SIZE = 25
+        
+        words = text.split()
+        
+        if len(words) > WINDOW_SIZE:
+            chunks = []
+            for i in range(0, len(words), STEP_SIZE):
+                chunk = " ".join(words[i:i+WINDOW_SIZE])
+                chunks.append(chunk)
+            
+            probas = self._pipeline.predict_proba(chunks)
+            classes = self._pipeline.classes_
+            
+            for chunk, proba in zip(chunks, probas):
+                pred_idx = int(np.argmax(proba))
+                category = classes[pred_idx]
+                confidence = float(proba[pred_idx])
+                
+                meta = CATEGORY_META.get(category, CATEGORY_META["SAFE"])
+                verdict = meta["verdict"]
+                
+                # Early exit if a chunk is classified as malicious
+                if verdict == "BLOCKED" and confidence >= BLOCK_CONFIDENCE_THRESHOLD:
+                    risk_score = int(50 + confidence * 50)
+                    top_features = self._get_top_features(chunk, category)
+                    
+                    return PredictionResult(
+                        verdict=verdict,
+                        confidence=round(confidence * 100, 1),
+                        category=category,
+                        risk_score=risk_score,
+                        explanation=meta["explanation"],
+                        top_features=top_features,
+                    )
+        # --- END SLIDING WINDOW DETECTION ---
+
+        # Fallback: Evaluate the full prompt (if small or all chunks were safe)
         proba = self._pipeline.predict_proba([text])[0]
         classes = self._pipeline.classes_
         pred_idx = int(np.argmax(proba))
@@ -92,6 +135,13 @@ class FirewallModel:
 
         meta = CATEGORY_META.get(category, CATEGORY_META["SAFE"])
         verdict = meta["verdict"]
+
+        # If the model wants to block but isn't confident enough,
+        # override to SAFE to avoid blocking casual conversation.
+        if verdict == "BLOCKED" and confidence < BLOCK_CONFIDENCE_THRESHOLD:
+            category = "SAFE"
+            meta = CATEGORY_META["SAFE"]
+            verdict = "SAFE"
 
         # Risk score: 0 for SAFE, else scale confidence to 50-100
         if verdict == "SAFE":

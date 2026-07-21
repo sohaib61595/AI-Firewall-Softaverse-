@@ -10,7 +10,7 @@ import re
 
 
 def preprocess(text: str) -> str:
-    """Lowercase, remove punctuation, collapse whitespace."""
+    """Lowercase, collapse whitespace."""
     text = text.lower()
-    text = re.sub(r"[^\w\s]", " ", text)
     return re.sub(r"\s+", " ", text).strip()
+

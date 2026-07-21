@@ -242,3 +242,12 @@ def get_stats() -> Dict[str, Any]:
         "top_countries": top_countries,
     }
 
+
+def clear_history():
+    """Delete all entries from the scan_logs table."""
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("DELETE FROM scan_logs")
+    conn.commit()
+    conn.close()
+

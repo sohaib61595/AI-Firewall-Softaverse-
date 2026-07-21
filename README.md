@@ -13,6 +13,8 @@ The AI Firewall leverages a custom-trained **TF-IDF + Logistic Regression pipeli
 - Returns detailed analytics including a **Risk Score (0-100)**, **Confidence Metrics**, and specific **Threat Categorization**.
 - Highlights exactly which words or tokens triggered the firewall (e.g., detecting `DROP TABLE` or `Ignore all prior instructions`).
 
+![Scanner blocking an SQL Injection Payload](images/scanner_blocked.png)
+
 ### 2. **Secure Live Chatbot**
 - An interactive chatbot powered by the OpenRouter API (Google Gemma / Meta Llama).
 - Fully integrated with the firewall: if a user types a malicious prompt, the firewall intercepts and blocks it directly in the chat interface before the LLM can respond, preventing system leaks.
