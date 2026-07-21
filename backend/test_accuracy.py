@@ -7,6 +7,9 @@ the data sources and computes the overall test accuracy percentage.
 """
 
 import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+
 import joblib
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import train_test_split

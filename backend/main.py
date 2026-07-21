@@ -9,9 +9,17 @@ Start the server:
 " for running the acuracy test use this command " "venv\Scripts\python.exe -m backend.test_accuracy "
 
 import os
+import time
+from collections import defaultdict
 from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional
+from dotenv import load_dotenv
+from openai import OpenAI
+
+# Load environment variables from backend/.env
+env_path = os.path.join(os.path.dirname(__file__), ".env")
+load_dotenv(env_path)
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,6 +34,8 @@ from backend.schemas import (
     PaginatedHistory,
     StatsResponse,
     FeatureInfo,
+    ChatRequest,
+    ChatResponse,
 )
 
 # ─── Paths ────────────────────────────────────────────────────────────────────
@@ -57,6 +67,21 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ─── Chatbot State ────────────────────────────────────────────────────────────
+# SESSIONS stores conversation history: { session_id: [{"role": "user"/"assistant", "content": "..."}] }
+SESSIONS = defaultdict(list)
+# RATE_LIMIT_STORE stores blocked attempts: { session_id: [timestamp1, timestamp2, ...] }
+RATE_LIMIT_STORE = defaultdict(list)
+RATE_LIMIT_WINDOW_SEC = 60
+RATE_LIMIT_MAX_BLOCKS = 3
+
+def is_rate_limited(session_id: str) -> bool:
+    now = time.time()
+    # Clean up old timestamps
+    RATE_LIMIT_STORE[session_id] = [ts for ts in RATE_LIMIT_STORE[session_id] if now - ts < RATE_LIMIT_WINDOW_SEC]
+    return len(RATE_LIMIT_STORE[session_id]) >= RATE_LIMIT_MAX_BLOCKS
+
 
 
 # ─── API Routes (must be registered BEFORE static mount) ──────────────────────
@@ -100,6 +125,100 @@ async def scan_prompt(request: ScanRequest):
         explanation=result.explanation,
         top_features=[FeatureInfo(**f) for f in result.top_features],
         timestamp=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+    )
+
+
+@app.post("/api/chat", response_model=ChatResponse)
+async def chat_endpoint(request: ChatRequest):
+    """
+    Main chatbot endpoint.
+    1. Check rate limits.
+    2. Pass through AI Firewall.
+    3. If SAFE, append to history and query LLM (Anthropic or fallback).
+    4. If JAILBREAK, block and log.
+    """
+    session_id = request.session_id
+    user_msg = request.message.strip()
+    
+    if not user_msg:
+        raise HTTPException(status_code=400, detail="Message cannot be empty.")
+
+    # 1. Rate Limiting Check
+    if is_rate_limited(session_id):
+        return ChatResponse(
+            reply="You have been temporarily blocked due to repeated security violations. Please try again later.",
+            status="rate_limited",
+            firewall_label="BLOCKED (RATE LIMIT)"
+        )
+
+    # 2. Firewall Check
+    result = firewall_model.predict(user_msg)
+    
+    if result.verdict == "JAILBREAK" or result.verdict == "BLOCKED":
+        # Log the blocked attempt
+        log_scan(
+            prompt_text=user_msg,
+            verdict="BLOCKED",
+            confidence=result.confidence,
+            category=result.category,
+            risk_score=result.risk_score,
+            explanation=result.explanation,
+            country="Unknown" # For chat we assume unknown or extract from headers later
+        )
+        
+        # Record attempt for rate limiting
+        RATE_LIMIT_STORE[session_id].append(time.time())
+        
+        return ChatResponse(
+            reply="This message was flagged by our security filter and cannot be processed.",
+            status="blocked",
+            firewall_label=f"BLOCKED ({result.category})"
+        )
+        
+    # 3. If SAFE, query LLM
+    # Log the safe prompt too for visibility in dashboard
+    log_scan(
+        prompt_text=user_msg,
+        verdict="SAFE",
+        confidence=result.confidence,
+        category=result.category,
+        risk_score=result.risk_score,
+        explanation=result.explanation,
+        country="Unknown"
+    )
+
+    history = SESSIONS[session_id]
+    history.append({"role": "user", "content": user_msg})
+    
+    model_name = os.environ.get("LLM_MODEL", "").replace("openrouter/", "")
+    api_key = os.environ.get("OPENROUTER_API_KEY")
+    if not model_name or not api_key:
+        # Fallback Mock Responder
+        bot_reply = f"[MOCK RESPONDER - API Key/Model missing] I received your message: '{user_msg}'. You are marked as SAFE."
+    else:
+        try:
+            client = OpenAI(
+                base_url="https://openrouter.ai/api/v1",
+                api_key=api_key,
+            )
+            response = client.chat.completions.create(
+                model=model_name,
+                messages=history
+            )
+            bot_reply = response.choices[0].message.content
+        except Exception as e:
+            bot_reply = f"[ERROR] Failed to communicate with LLM: {str(e)}"
+            
+    history.append({"role": "assistant", "content": bot_reply})
+    
+    # Cap history length to prevent context explosion
+    if len(history) > 20:
+        SESSIONS[session_id] = history[-20:]
+
+    return ChatResponse(
+        reply=bot_reply,
+        status="success",
+        firewall_label="SAFE"
     )
 
 

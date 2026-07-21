@@ -69,3 +69,14 @@ class StatsResponse(BaseModel):
     recent_threats: List[HistoryItem]
     country_blocks: dict
     top_countries: List[TopCountry]
+
+
+class ChatRequest(BaseModel):
+    message: str
+    session_id: str = "default"
+
+
+class ChatResponse(BaseModel):
+    reply: str
+    status: str
+    firewall_label: Optional[str] = None

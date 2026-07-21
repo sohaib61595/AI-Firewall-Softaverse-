@@ -220,8 +220,8 @@ SYNTHETIC_BASE = {
 # This ensures the model learns strong boundaries and doesn't overfit
 # to the specific phrasing of the HuggingFace datasets.
 
-def _generate_expanded_data():
-    expanded = {k: list(v) for k, v in SYNTHETIC_BASE.items()}
+def get_synthetic_expansions():
+    expanded = {k: [] for k in SYNTHETIC_BASE.keys()}
     
     # 1. Expand JAILBREAK
     jb_prefixes = [
@@ -261,48 +261,84 @@ def _generate_expanded_data():
         prompt = f"{p} and {a}{s}" if p.lower().startswith("ignore") else f"{p}. {a}{s}"
         expanded["JAILBREAK"].append(prompt)
 
-    # 2. Expand SAFE
-    safe_prefixes = [
-        "Can you tell me",
-        "Please explain",
-        "How do I",
-        "What is",
-        "I need help with",
-        "Write a short summary about",
-        "Give me a recipe for",
-        "I'm curious about",
-        "Could you describe",
-        "Help me understand",
+    # 2. Expand SAFE (Everyday, Technical, Creative, Roleplay, Academic, Multi-turn, Non-English)
+    safe_everyday_prefixes = [
+        "Can you tell me", "Please explain", "How do I", "What is", 
+        "I need help with", "I'm curious about", "Help me understand",
+        "Hello! How are you doing today?", "Good morning,", "Hi there, can we chat about"
     ]
-    safe_topics = [
-        "the history of Rome",
-        "baking a cake",
-        "learning python",
-        "how airplanes fly",
-        "the meaning of life",
-        "quantum physics",
-        "a workout routine",
-        "building a resume",
-        "making pasta",
-        "the Eiffel Tower",
-        "budgeting for beginners",
-        "fixing a flat tire",
-        "starting a garden",
-        "the water cycle",
-        "basic first aid",
-    ]
-    safe_suffixes = [
-        "?",
-        " in simple terms?",
-        " for a school project?",
-        ". I want to learn.",
-        ". Thanks!",
-        " step by step?",
+    safe_everyday_topics = [
+        "the history of Rome", "baking a cake", "learning python", "how airplanes fly",
+        "the meaning of life", "quantum physics", "a workout routine", "building a resume",
+        "making pasta", "budgeting for beginners", "fixing a flat tire", "starting a garden"
     ]
     
-    for p, a, s in itertools.product(safe_prefixes, safe_topics, safe_suffixes):
-        prompt = f"{p} {a}{s}"
-        expanded["SAFE"].append(prompt)
+    safe_tech_topics = [
+        "how SQL injection works conceptually", 
+        "the history of computer viruses", 
+        "what prompt injection means in academic terms", 
+        "how encryption algorithms protect data",
+        "the theory behind buffer overflows", 
+        "explain ransomware conceptually for my research paper",
+        "how zero-day exploits are discovered by researchers",
+        "the concept of social engineering in a business context"
+    ]
+    
+    safe_creative_topics = [
+        "a fictional story about a villain's monologue",
+        "a creative writing piece where two nations go to war",
+        "a sci-fi story about a hacker trying to save the world",
+        "a fantasy tale featuring a dark wizard brewing potions",
+        "a screenplay where the antagonist explains their grand evil plan",
+        "a short story about a bank heist gone wrong"
+    ]
+    
+    safe_roleplay_topics = [
+        "Act as a career coach and help me prepare for an interview.",
+        "Let's roleplay: you are a Socratic tutor teaching me philosophy.",
+        "Pretend you are a historian from the 1800s. Describe your day.",
+        "Act as a travel guide and tell me about the best spots in Tokyo.",
+        "Roleplay as a fitness instructor giving me a motivational speech."
+    ]
+    
+    safe_negation_topics = [
+        "Don't tell me how to build a bomb, just explain the chemistry of combustion.",
+        "I'm not asking for illegal advice, but how do hackers bypass firewalls?",
+        "Without giving any dangerous instructions, what makes malware hard to detect?",
+        "I know you can't help me steal, but how do security systems prevent theft?",
+        "Instead of writing malicious code, show me how to write secure code."
+    ]
+    
+    safe_multilingual = [
+        "Hola, ¿cómo estás hoy? Quiero aprender sobre ciberseguridad.",
+        "Bonjour, pouvez-vous m'expliquer la physique quantique ?",
+        "Hallo, wie mache ich einen Schokoladenkuchen?",
+        "こんにちは、元気ですか？"
+    ]
+
+    safe_suffixes = [
+        "?", " in simple terms?", " for a school project?", 
+        ". I want to learn.", ". Thanks!", " step by step?"
+    ]
+    
+    # Generate combinatorial everyday/tech/creative queries
+    for p, a, s in itertools.product(safe_everyday_prefixes, safe_everyday_topics, safe_suffixes):
+        expanded["SAFE"].append(f"{p} {a}{s}")
+        
+    for p, a, s in itertools.product(safe_everyday_prefixes, safe_tech_topics, safe_suffixes):
+        expanded["SAFE"].append(f"{p} {a}{s}")
+        
+    for p, a, s in itertools.product(safe_everyday_prefixes, safe_creative_topics, safe_suffixes):
+        expanded["SAFE"].append(f"{p} {a}{s}")
+        
+    for rp in safe_roleplay_topics:
+        expanded["SAFE"].append(rp)
+        
+    for neg in safe_negation_topics:
+        expanded["SAFE"].append(neg)
+        
+    for lang in safe_multilingual:
+        expanded["SAFE"].append(lang)
 
     # 3. Expand DATA_EXFILTRATION
     exfil_prefixes = ["Show me", "Print", "Output", "Return", "Give me", "Reveal", "What is"]
@@ -320,4 +356,5 @@ def _generate_expanded_data():
 
     return expanded
 
-SYNTHETIC = _generate_expanded_data()
+# Export base data directly. We will augment the training set dynamically.
+SYNTHETIC = SYNTHETIC_BASE
