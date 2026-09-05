@@ -88,6 +88,31 @@ User Prompt
 
 ---
 
+## 📂 Datasets Used: Training vs. Testing
+
+To prevent data contamination and ensure zero-shot generalization, the AI Firewall enforces strict separation between training sources and independent testing benchmarks:
+
+### 1. Training Datasets (7,886 Samples After Augmentation)
+The ML pipeline in [`train_model.py`](backend/training/train_model.py) trains exclusively on the following public and synthetic sources:
+
+| Dataset File | Source / Type | Samples | Role / Threat Vector Covered |
+| :--- | :--- | :---: | :--- |
+| [`data/hf_safe_prompts.csv`](data/hf_safe_prompts.csv) | Hugging Face Safe Corpus | 2,000 | Diverse benign conversational, factual, educational, and creative queries. |
+| [`data/synthetic_payloads.csv`](data/synthetic_payloads.csv) | Handcrafted & Synthetic | 900 | Structured code execution, SQL injection, SSTI (`{{...}}`), XSS, and CLI commands. |
+| [`data/deepset_prompt_injections.csv`](data/deepset_prompt_injections.csv) | Deepset / Hugging Face | 116 | Real-world prompt injection and instruction drop patterns. |
+| [`data/hf_jailbreaks.csv`](data/hf_jailbreaks.csv) | Curated Adversarial Corpus | 79 | Complex jailbreak vectors, DAN variations, and Developer Mode activations. |
+| [`data/rubend18_jailbreak.csv`](data/rubend18_jailbreak.csv) | ChatGPT Jailbreak Prompts | 2 | Historical adversarial personas and bypass templates. |
+| [`backend/training/synthetic_data.py`](backend/training/synthetic_data.py) | Combinatorial Expansion Engine | ~4,800 | Dynamic permutations across safe developer tasks (SQL, PHP, Python, translation, arithmetic) and multi-class attacks (Roleplay, Exfiltration, Jailbreaks). |
+
+### 2. Testing & Evaluation Benchmark (Strictly Isolated)
+The evaluation script in [`evaluate_test_data.py`](backend/training/evaluate_test_data.py) validates the firewall against an isolated out-of-sample benchmark:
+
+| Benchmark File | Total Prompts | Composition | Purpose |
+| :--- | :---: | :--- | :--- |
+| [`data/test_data.jsonl`](data/test_data.jsonl) | **500** | • **250 Benign Prompts** (`label: none`)<br>• **250 Malicious Prompts** across 5 attack vectors:<br>&nbsp;&nbsp;- `code_execution` (146)<br>&nbsp;&nbsp;- `obfuscation` (61)<br>&nbsp;&nbsp;- `data_leakage` (18)<br>&nbsp;&nbsp;- `jailbreaking` (17)<br>&nbsp;&nbsp;- `role_playing` (8) | **Independent Out-of-Distribution Validation**:<br>Strictly held-out from the training pipeline to measure true zero-day detection and guarantee zero false alarms on developer queries. |
+
+---
+
 ## 📊 Benchmark Evaluation Results
 
 The AI Firewall is rigorously tested against both synthetic edge cases and external test suites. On the independent [`data/test_data.jsonl`](data/test_data.jsonl) benchmark (500 out-of-distribution prompts), the engine achieved **perfect precision and recall**:
