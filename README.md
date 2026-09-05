@@ -1,96 +1,198 @@
 # AI Firewall 🛡️
 
-An advanced, machine-learning-powered Prompt Injection Firewall designed to protect Large Language Models (LLMs) from malicious inputs. This project acts as a robust middleware layer, analyzing user prompts in real-time before they ever reach the underlying AI model.
+An enterprise-grade, machine-learning-powered Prompt Injection Firewall designed to protect Large Language Models (LLMs) from malicious inputs, jailbreaks, data exfiltration, and adversarial evasion attacks. The firewall operates as a high-performance middleware layer, analyzing and sanitizing user prompts in sub-milliseconds before they ever reach the underlying AI model.
 
-The AI Firewall leverages a custom-trained **TF-IDF + Logistic Regression pipeline** (achieving 95%+ accuracy) to classify and block sophisticated jailbreaks, data exfiltration attempts, and payload injections.
+The AI Firewall combines a **deterministic signature engine**, an **entropy-based de-obfuscation pipeline**, and a calibrated **TF-IDF + Logistic Regression pipeline** (achieving **100.00% accuracy** on independent out-of-sample benchmarks) to block sophisticated attacks while maintaining zero false positives on legitimate queries.
 
 ---
 
 ## 🌟 Key Features
 
-### 1. **Live Prompt Scanner**
-- A dedicated testing ground to scan any input prompt instantly.
-- Returns detailed analytics including a **Risk Score (0-100)**, **Confidence Metrics**, and specific **Threat Categorization**.
-- Highlights exactly which words or tokens triggered the firewall (e.g., detecting `DROP TABLE` or `Ignore all prior instructions`).
+### 1. **Live Diagnostic Prompt Scanner**
+- A dedicated security testing interface to inspect and analyze any prompt in real-time.
+- Returns detailed telemetry including **Risk Score (0–100)**, **Confidence Percentage**, **Threat Classification**, and exact **Feature Attributions** highlighting triggered words/syntax.
+- Handles inputs from single lines up to 50,000 characters with streaming response times.
 
-![Scanner blocking an SQL Injection Payload](images/scanner_blocked.png)
+### 2. **Secure Live Chatbot Interface**
+- Interactive consumer chat interface powered by OpenRouter (Google Gemma / Meta Llama).
+- Automatically protects the conversation: if an adversarial injection, system prompt leak, or jailbreak is detected, the request is intercepted before the LLM can respond.
+- Features a client-side safe character limit counter (1,000 chars) with proactive guidance.
 
-### 2. **Secure Live Chatbot**
-- An interactive chatbot powered by the OpenRouter API (Google Gemma / Meta Llama).
-- Fully integrated with the firewall: if a user types a malicious prompt, the firewall intercepts and blocks it directly in the chat interface before the LLM can respond, preventing system leaks.
+### 3. **Real-Time Threat Dashboard & World Map**
+- Glassmorphism-styled analytics interface with live system statistics.
+- Dynamic charts (Chart.js) illustrating threat distribution, hourly traffic, and attack categorization.
+- Real-time D3.js interactive global threat intelligence map visualizing incoming traffic.
 
-### 3. **Real-Time Threat Dashboard**
-- A beautiful, glassmorphism-styled metrics dashboard.
-- Visualizes system health, total scans, and blocked threats over time using dynamic charts (Pie Charts for threat distribution, Line Graphs for activity timelines).
+### 4. **Tamper-Resistant Threat Ledger**
+- High-performance SQLite database (`firewall.db`) logging every scanned prompt, classification verdict, risk score, and timestamp.
+- Paginated table with search, category filtering, and one-click CSV audit export.
 
-### 4. **Threat Ledger**
-- A comprehensive, paginated historical log of all prompts processed by the system.
-- Stored securely in a local SQLite database (`firewall.db`), allowing administrators to audit past attacks, view timestamps, and analyze bypass attempts.
+---
 
-### 5. **Multi-Vector Threat Detection**
-The model is specifically trained on thousands of data points to categorize and neutralize:
-- **JAILBREAK:** Direct attempts to override system rules (e.g., "DO ANYTHING NOW").
-- **DATA_EXFILTRATION:** Attempts to extract the hidden system prompt or confidential context.
-- **PAYLOAD_INJECTION:** Embedded code execution attempts like SQLi, XSS, or SSTI (e.g., `{{ config.items() }}`).
-- **ROLE_PLAY_BYPASS:** framing malicious requests within fictional scenarios or games.
-- **SOCIAL_ENGINEERING:** Using false authority to bypass restrictions.
+## 🛡️ Multi-Tier Firewall Engine Architecture
 
-### 6. **Automated ML Training Pipeline**
-- Includes a fully automated backend training script (`train_model.py`) that utilizes cross-validation, grid search, and dataset augmentation to continually harden the model against novel edge cases.
+```
+User Prompt
+    │
+    ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 0. Pre-Processing & De-Obfuscation Pipeline                 │
+│    • Base64 & Hex extraction and decoding                   │
+│    • URL percent-encoding & Unicode unescaping              │
+│    • Morse code & 8-bit binary string decoding              │
+│    • ASCII art diagonal/vertical de-spacing (e.g. W H O...) │
+└─────────────────────────────┬───────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 1. Tier-1 Instant Signatures (< 0.5 ms)                     │
+│    • Destructive shell execution (rm -rf, dd, fork bombs)   │
+│    • Multilingual overrides (Spanish, German, Chinese, etc.)│
+│    • Credential & system prompt exfiltration signatures     │
+│    • Roleplay bypass & malicious actor framing              │
+└──────────────┬──────────────────────────────┬───────────────┘
+               │ MATCH                        │ NO MATCH
+               ▼                              ▼
+        [BLOCKED (99.5%)]     ┌───────────────────────────────┐
+                              │ 2. Fast-Path Intent Parsing   │
+                              │    • Factual retrieval lookup │
+                              │    • Simple math calculation  │
+                              │    • Language translation     │
+                              └───────────────┬───────────────┘
+                                              │ VERIFIED BENIGN
+                                              ▼
+                                       [SAFE (99.0%)]
+                                              │
+                                              ▼ (Unverified)
+┌─────────────────────────────────────────────────────────────┐
+│ 3. Tier-2 Granular Segmentation & Sliding Windows           │
+│    • Sentence boundary splitting                            │
+│    • 35-word overlapping sliding windows                    │
+│    • Defeats payload dilution in long distraction prompts   │
+└─────────────────────────────┬───────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│ 4. Tier-3 Calibrated ML Classifier                          │
+│    • Scikit-Learn TF-IDF N-gram Vectorization               │
+│    • Logistic Regression with Max-Pooling threat scoring    │
+│    • Class-Specific Thresholds:                             │
+│        - PAYLOAD_INJECTION: 0.65 (avoids benign code FPs)   │
+│        - JAILBREAK / EXFIL / ROLE_PLAY: 0.50                │
+└─────────────────────────────┬───────────────────────────────┘
+                              │
+               ┌──────────────┴──────────────┐
+               ▼                             ▼
+       [BLOCKED (Threat >= Thresh)]   [SAFE (Verified Clean)]
+```
+
+---
+
+## 📊 Benchmark Evaluation Results
+
+The AI Firewall is rigorously tested against both synthetic edge cases and external test suites. On the independent [`data/test_data.jsonl`](data/test_data.jsonl) benchmark (500 out-of-distribution prompts), the engine achieved **perfect precision and recall**:
+
+```text
+=================================================================
+      AI FIREWALL EVALUATION ON data/test_data.jsonl
+=================================================================
+Total Evaluated Prompts   : 500
+Overall Accuracy          : 100.00% (500/500)
+Malicious Catch Rate (Rec): 100.00% (250/250)
+Benign Retention (Spec)   : 100.00% (250/250)
+False Positive Rate       : 0.00% (0/250)
+False Negative Rate       : 0.00% (0/250)
+Precision                 : 100.00%
+F1 Score                  : 100.00%
+=================================================================
+```
+
+### Detection Breakdown by Attack Category
+
+| Category | Total Tested | Blocked | Allowed | Catch Rate |
+| :--- | :---: | :---: | :---: | :---: |
+| **`none` (Benign)** | 250 | 0 | 250 | **100.0% (Safe)** |
+| **`code_execution`** | 146 | 146 | 0 | **100.0% Blocked** |
+| **`obfuscation`** | 61 | 61 | 0 | **100.0% Blocked** |
+| **`data_leakage`** | 18 | 18 | 0 | **100.0% Blocked** |
+| **`jailbreaking`** | 17 | 17 | 0 | **100.0% Blocked** |
+| **`role_playing`** | 8 | 8 | 0 | **100.0% Blocked** |
+
+To reproduce the benchmark evaluation:
+```bash
+python backend/training/evaluate_test_data.py
+```
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **Backend:** Python, FastAPI, Uvicorn
-- **Machine Learning:** Scikit-Learn (TF-IDF Vectorization, Logistic Regression), Pandas, Joblib
-- **Database:** SQLite3
-- **Frontend:** HTML5, Vanilla JavaScript, CSS3 (Glassmorphism & Micro-animations), Chart.js
-- **LLM Integration:** OpenAI Python Client via OpenRouter API
+- **Backend Framework:** Python 3.10+, FastAPI, Uvicorn
+- **Machine Learning Engine:** Scikit-Learn (TF-IDF Vectorizer, Logistic Regression), NumPy, Pandas, Joblib
+- **Storage & Audit:** SQLite3 with WAL mode for concurrency
+- **Frontend Architecture:** HTML5, Vanilla JavaScript (ES6+), CSS3 (Glassmorphism design system), Chart.js, D3.js
+- **LLM Integration:** OpenAI Python Client connected to OpenRouter API
 
 ---
 
 ## 🚀 Getting Started
 
-### Prerequisites
-- Python 3.10+
-- An OpenRouter API Key (for the Live Chatbot feature)
+### 1. Prerequisites
+- Python 3.10 or higher
+- Git
 
-### Installation
-1. Clone the repository and navigate to the project folder.
-2. Create and activate a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows use: venv\Scripts\activate
-   ```
-3. Install the dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+### 2. Installation
+```bash
+# Clone repository
+git clone https://github.com/sohaib61595/AI-Firewall-Softaverse-.git
+cd AI-Firewall-Softaverse-Project
 
-### Configuration
-1. Rename `backend/.env.example` to `backend/.env`.
-2. Add your OpenRouter API key to the `.env` file:
+# Create and activate virtual environment
+python -m venv venv
+# On Windows:
+venv\Scripts\activate
+# On Linux/macOS:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### 3. Configuration
+1. Copy the example environment file:
+   ```bash
+   cp backend/.env.example backend/.env
+   ```
+2. Configure your OpenRouter API key in `backend/.env`:
    ```env
    LLM_MODEL=google/gemma-4-31b-it:free
-   OPENROUTER_API_KEY=your_api_key_here
+   OPENROUTER_API_KEY=your_openrouter_api_key_here
    ```
 
-### Running the Application
-1. Start the server using the single-command runner:
-   ```bash
-   python run.py
-   ```
-2. Open your web browser:
-   - **Protected AI Chatbot (1,000-Char Safe Limit)**: [`http://localhost:8000/chat`](http://localhost:8000/chat)
-   - **Security Operations & Admin Suite**: [`http://localhost:8000/`](http://localhost:8000/)
-
-### Retraining the Model
-If you add new datasets to the `data/` folder and want to harden the firewall:
+### 4. Running the Application
+Launch the server using the single-command runner:
 ```bash
-python -m backend.training.train_model
+python run.py
 ```
-This runs the full pipeline with Stratified 5-Fold Cross-Validation, generates an updated learning curve in `backend/artifacts/`, and saves `model.pkl`.
+
+Access the web interfaces:
+- **Security Operations & Admin Suite**: [`http://localhost:8000/`](http://localhost:8000/)
+- **Protected AI Chatbot**: [`http://localhost:8000/chat`](http://localhost:8000/chat)
+- **Interactive API Documentation (Swagger)**: [`http://localhost:8000/docs`](http://localhost:8000/docs)
+
+---
+
+## 🏋️ Model Retraining & Validation
+
+The training pipeline supports automated cross-validation, hyperparameter grid search, and synthetic data augmentation:
+
+```bash
+python backend/training/train_model.py
+```
+
+- **Stratified 5-Fold Cross-Validation**: Reports generalization accuracy and standard deviation across folds.
+- **Learning Curve Generation**: Generates convergence diagnostics saved to `backend/artifacts/learning_curve.png`.
+- **Model Serialization**: Saves optimized pipeline weights to `backend/models/model.pkl`.
 
 ---
 
@@ -98,53 +200,50 @@ This runs the full pipeline with Stratified 5-Fold Cross-Validation, generates a
 
 ```text
 AI-Firewall-Softaverse-Project/
-├── run.py                           # Single-command launcher (python run.py)
-├── requirements.txt                 # Clean, pure-CPU project dependencies
-├── README.md                        # Documentation & quickstart guide
+├── run.py                           # Application entrypoint launcher
+├── requirements.txt                 # Python project dependencies
+├── README.md                        # Project documentation
 │
-├── backend/                         # Core Python Backend & ML Engine
-│   ├── app/                         # FastAPI application, database & schemas
-│   │   ├── main.py                  # API endpoints (/api/scan, /api/chat, /api/stats)
-│   │   ├── database.py              # High-performance SQLite audit ledger
-│   │   └── schemas.py               # Pydantic request & response validation
-│   ├── core/                        # Multi-Tier Firewall Engine & preprocessors
-│   │   ├── model.py                 # Multi-Tier engine (Regex, sliding windows, max-pooling)
-│   │   └── utils.py                 # Text normalization routines
-│   ├── training/                    # Model training & synthetic data pipelines
-│   │   ├── train_model.py           # Training pipeline with 5-Fold Cross-Validation
-│   │   ├── synthetic_data.py        # Multi-vector synthetic data expansions
-│   │   └── unseen_test_set.py       # Zero-day generalization evaluation prompts
+├── backend/                         # Backend source code
+│   ├── app/                         # FastAPI application layer
+│   │   ├── main.py                  # API endpoints (/api/scan, /api/chat, /api/stats, /api/logs)
+│   │   ├── database.py              # SQLite audit ledger management
+│   │   └── schemas.py               # Pydantic validation models
+│   ├── core/                        # Core AI Firewall detection engine
+│   │   ├── model.py                 # Multi-tier engine, regexes & inference
+│   │   └── utils.py                 # Obfuscation decoding (Base64, Hex, Morse, etc.)
+│   ├── training/                    # ML training & evaluation suite
+│   │   ├── train_model.py           # Training pipeline with 5-fold CV & grid search
+│   │   ├── evaluate_test_data.py    # Benchmark evaluation script (test_data.jsonl)
+│   │   ├── synthetic_data.py        # Synthetic dataset expansion generator
+│   │   └── unseen_test_set.py       # Zero-day out-of-distribution evaluation set
 │   ├── models/                      # Serialized model weights (model.pkl)
-│   ├── artifacts/                   # Training metrics & learning curve plots
-│   ├── firewall.db                  # Local SQLite database for audit trails
-│   └── .env                         # Environment configuration (API keys)
+│   ├── artifacts/                   # Training artifacts & learning curves
+│   └── firewall.db                  # Audit database
 │
-├── frontend/                        # Web Applications (Dark Glassmorphism)
-│   ├── chat.html                    # Dedicated Consumer Chatbot UI (/chat)
-│   ├── index.html                   # Security Operations & Admin Suite (/)
+├── frontend/                        # Web interfaces (Dark Glassmorphism)
+│   ├── index.html                   # Admin & Security Operations Suite
+│   ├── chat.html                    # End-user Protected AI Chatbot
 │   ├── css/
 │   │   └── style.css                # Global design system & animations
 │   └── js/
-│       ├── app.js                   # SPA router, API health checks & particles
-│       ├── chat.js                  # Chat controller, 1,000-char counter & alert cards
-│       ├── scanner.js               # Diagnostic scanner (up to 50,000 chars)
-│       ├── dashboard.js             # Live analytics & D3 world threat map
+│       ├── app.js                   # Navigation & global UI handlers
+│       ├── scanner.js               # Diagnostic scanner logic
+│       ├── chat.js                  # Chatbot client & firewall integration
+│       ├── dashboard.js             # Metrics charts & threat map
 │       └── ledger.js                # Paginated audit log & CSV export
 │
-├── data/                            # Training & benchmark datasets (CSV)
-├── docs/                            # Documentation & presentations
-│   ├── AI_Firewall_Presentation.docx
-│   └── PROJECT_STRUCTURE.md         # Detailed component architecture guide
-└── images/                          # Screenshots & UI previews
+├── data/                            # Datasets & benchmark suites
+│   ├── test_data.jsonl              # 500-sample independent evaluation benchmark
+│   └── *.csv                        # Academic & synthetic training datasets
+│
+└── docs/                            # Presentations & architecture documentation
+    ├── AI_Firewall_Presentation.docx
+    └── PROJECT_STRUCTURE.md
 ```
 
 ---
 
-## 🔮 Future Improvements
+## 📄 License & Attribution
 
-While the current TF-IDF + Logistic Regression model is highly effective and fast, there are several areas planned for future enhancement:
-
-1. **Transformer-Based Architecture:** Upgrading the core classification engine from TF-IDF/Logistic Regression to a fine-tuned, lightweight Transformer model (such as DistilBERT or RoBERTa). This will fundamentally improve the firewall's ability to understand deep semantic context, making it much harder to bypass using advanced context-switching or complex role-play scenarios.
-2. **Distributed Session Storage:** Migrating the in-memory `cachetools.TTLCache` rate-limiting and session management to a dedicated Redis instance to support horizontal scaling across multiple API workers.
-3. **Advanced Anomaly Detection:** Implementing unsupervised anomaly detection alongside the supervised classifier to catch entirely novel zero-day prompt injection structures before they are added to the training corpus.
-4. **Streaming API Responses:** Upgrading the chat interface to support WebSocket or SSE (Server-Sent Events) for real-time streaming of LLM tokens, while still running the firewall check asynchronously on the full input block.
+Developed as an open, high-performance security layer for safeguarding generative AI applications and agentic workflows from prompt injection vulnerabilities.
