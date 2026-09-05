@@ -18,6 +18,9 @@ The AI Firewall combines a **deterministic signature engine**, an **entropy-base
 - Automatically protects the conversation: if an adversarial injection, system prompt leak, or jailbreak is detected, the request is intercepted before the LLM can respond.
 - Features a client-side safe character limit counter (1,000 chars) with proactive guidance.
 
+![Protected AI Chatbot — Live Defense Demonstration](screenshots/chatbot_shielded_demo.png)
+
+
 ### 3. **Real-Time Threat Dashboard & World Map**
 - Glassmorphism-styled analytics interface with live system statistics.
 - Dynamic charts (Chart.js) illustrating threat distribution, hourly traffic, and attack categorization.
