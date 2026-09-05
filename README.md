@@ -215,8 +215,7 @@ AI-Firewall-Softaverse-Project/
 │   ├── training/                    # ML training & evaluation suite
 │   │   ├── train_model.py           # Training pipeline with 5-fold CV & grid search
 │   │   ├── evaluate_test_data.py    # Benchmark evaluation script (test_data.jsonl)
-│   │   ├── synthetic_data.py        # Synthetic dataset expansion generator
-│   │   └── unseen_test_set.py       # Zero-day out-of-distribution evaluation set
+│   │   └── synthetic_data.py        # Synthetic dataset expansion generator
 │   ├── models/                      # Serialized model weights (model.pkl)
 │   ├── artifacts/                   # Training artifacts & learning curves
 │   └── firewall.db                  # Audit database
@@ -233,13 +232,9 @@ AI-Firewall-Softaverse-Project/
 │       ├── dashboard.js             # Metrics charts & threat map
 │       └── ledger.js                # Paginated audit log & CSV export
 │
-├── data/                            # Datasets & benchmark suites
-│   ├── test_data.jsonl              # 500-sample independent evaluation benchmark
-│   └── *.csv                        # Academic & synthetic training datasets
-│
-└── docs/                            # Presentations & architecture documentation
-    ├── AI_Firewall_Presentation.docx
-    └── PROJECT_STRUCTURE.md
+└── data/                            # Datasets & benchmark suites
+    ├── test_data.jsonl              # 500-sample independent evaluation benchmark
+    └── *.csv                        # Academic & synthetic training datasets
 ```
 
 ---
