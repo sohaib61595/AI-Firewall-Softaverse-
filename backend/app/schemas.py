@@ -1,3 +1,9 @@
+"""
+backend/app/schemas.py
+======================
+Pydantic Request/Response models for API endpoints.
+"""
+
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime

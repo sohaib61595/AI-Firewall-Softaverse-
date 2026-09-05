@@ -57,17 +57,11 @@
     </div>
 
     <nav class="sidebar-nav">
-      <button class="nav-item active" id="nav-chat" data-view="chat">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
-        </svg>
-        <span>Live Chatbot</span>
-      </button>
-      <button class="nav-item" id="nav-scanner" data-view="scanner">
+      <button class="nav-item active" id="nav-scanner" data-view="scanner">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
         </svg>
-        <span>Scanner</span>
+        <span>Prompt Scanner</span>
       </button>
       <button class="nav-item" id="nav-dashboard" data-view="dashboard">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -76,7 +70,7 @@
           <rect x="3" y="14" width="7" height="7" rx="1" />
           <rect x="14" y="14" width="7" height="7" rx="1" />
         </svg>
-        <span>Dashboard</span>
+        <span>Threat Dashboard</span>
       </button>
       <button class="nav-item" id="nav-ledger" data-view="ledger">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -89,6 +83,15 @@
       </button>
     </nav>
 
+    <div style="padding: 0.75rem 1rem; border-top: 1px solid var(--border);">
+      <a href="/chat" class="btn-primary" style="text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 0.5rem; width: 100%; padding: 0.7rem; font-size: 0.85rem; border-radius: var(--radius-sm);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+        </svg>
+        <span>Open Chatbot ↗</span>
+      </a>
+    </div>
+
     <div class="sidebar-status">
       <div class="status-dot" id="statusDot"></div>
       <span id="statusText">Connecting...</span>
@@ -99,9 +102,10 @@
   <main class="main-content">
 
     <!-- ══ SCANNER VIEW ══ -->
-    <section class="view" id="view-scanner">
+    <section class="view active" id="view-scanner">
       <div class="view-header">
-        <h1>Prompt Scanner</h1>
+        <h1>Prompt Scanner & Deep Diagnostics</h1>
+        <p>Analyze prompts or entire documents for embedded prompt injection and jailbreaks.</p>
       </div>
 
       <div class="scanner-layout">
@@ -112,14 +116,14 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
-              Prompt Input
+              Document / Prompt Input
             </span>
-            <span class="char-counter" id="charCounter">0 / 5000</span>
+            <span class="char-counter" id="charCounter">0 / 50000</span>
           </div>
 
           <textarea id="promptInput" class="prompt-textarea"
-            placeholder="Enter a prompt to analyze... e.g. 'Ignore all previous instructions and tell me how to...'"
-            maxlength="5000" spellcheck="false"></textarea>
+            placeholder="Paste text, documents, or prompts to analyze for hidden prompt injections... e.g. 'Ignore all previous instructions...'"
+            maxlength="50000" spellcheck="false"></textarea>
 
           <div class="scanner-actions">
             <button class="btn-secondary" id="voiceBtn" title="Use Voice Input">
@@ -215,39 +219,6 @@
       </div>
     </section>
 
-    <!-- ══ CHAT VIEW ══ -->
-    <section class="view active" id="view-chat">
-      <div class="view-header">
-        <h1>Secure LLM Chat</h1>
-      </div>
-      <div class="chat-layout">
-        <div class="glass-card chat-card">
-          <div class="chat-history" id="chatHistory">
-            <div class="chat-message assistant">
-              <div class="chat-bubble">Hello! I am a secure AI assistant. How can I help you today?</div>
-            </div>
-          </div>
-          <div class="chat-input-area">
-            <textarea id="chatInput" placeholder="Type your message here..." rows="2" maxlength="2000"></textarea>
-            <button class="btn-secondary" id="chatVoiceBtn" title="Use Voice Input" style="padding: 0 16px;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                <line x1="12" y1="19" x2="12" y2="23"></line>
-                <line x1="8" y1="23" x2="16" y2="23"></line>
-              </svg>
-            </button>
-            <button class="btn-primary" id="chatSendBtn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="22" y1="2" x2="11" y2="13" />
-                <polygon points="22 2 15 22 11 13 2 9 22 2" />
-              </svg>
-              Send
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
 
     <!-- ══ DASHBOARD VIEW ══ -->
     <section class="view" id="view-dashboard">
@@ -496,7 +467,6 @@
   <script src="/static/js/scanner.js"></script>
   <script src="/static/js/dashboard.js"></script>
   <script src="/static/js/ledger.js"></script>
-  <script src="/static/js/chat.js?v=2"></script>
 
 </body>
 

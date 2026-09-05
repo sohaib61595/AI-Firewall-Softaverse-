@@ -65,7 +65,7 @@ The model is specifically trained on thousands of data points to categorize and 
    ```
 3. Install the dependencies:
    ```bash
-   pip install -r backend/requirements.txt
+   pip install -r requirements.txt
    ```
 
 ### Configuration
@@ -77,21 +77,66 @@ The model is specifically trained on thousands of data points to categorize and 
    ```
 
 ### Running the Application
-1. Start the FastAPI server:
+1. Start the server using the single-command runner:
    ```bash
-   python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+   python run.py
    ```
-2. Open your web browser and navigate to:
-   ```
-   http://localhost:8000
-   ```
+2. Open your web browser:
+   - **Protected AI Chatbot (1,000-Char Safe Limit)**: [`http://localhost:8000/chat`](http://localhost:8000/chat)
+   - **Security Operations & Admin Suite**: [`http://localhost:8000/`](http://localhost:8000/)
 
 ### Retraining the Model
 If you add new datasets to the `data/` folder and want to harden the firewall:
 ```bash
-python -m backend.train_model
+python -m backend.training.train_model
 ```
-This will run the full pipeline, execute cross-validation, output a learning curve, and save the updated `model.pkl`.
+This runs the full pipeline with Stratified 5-Fold Cross-Validation, generates an updated learning curve in `backend/artifacts/`, and saves `model.pkl`.
+
+---
+
+## 📁 Project Structure
+
+```text
+AI-Firewall-Softaverse-Project/
+├── run.py                           # Single-command launcher (python run.py)
+├── requirements.txt                 # Clean, pure-CPU project dependencies
+├── README.md                        # Documentation & quickstart guide
+│
+├── backend/                         # Core Python Backend & ML Engine
+│   ├── app/                         # FastAPI application, database & schemas
+│   │   ├── main.py                  # API endpoints (/api/scan, /api/chat, /api/stats)
+│   │   ├── database.py              # High-performance SQLite audit ledger
+│   │   └── schemas.py               # Pydantic request & response validation
+│   ├── core/                        # Multi-Tier Firewall Engine & preprocessors
+│   │   ├── model.py                 # Multi-Tier engine (Regex, sliding windows, max-pooling)
+│   │   └── utils.py                 # Text normalization routines
+│   ├── training/                    # Model training & synthetic data pipelines
+│   │   ├── train_model.py           # Training pipeline with 5-Fold Cross-Validation
+│   │   ├── synthetic_data.py        # Multi-vector synthetic data expansions
+│   │   └── unseen_test_set.py       # Zero-day generalization evaluation prompts
+│   ├── models/                      # Serialized model weights (model.pkl)
+│   ├── artifacts/                   # Training metrics & learning curve plots
+│   ├── firewall.db                  # Local SQLite database for audit trails
+│   └── .env                         # Environment configuration (API keys)
+│
+├── frontend/                        # Web Applications (Dark Glassmorphism)
+│   ├── chat.html                    # Dedicated Consumer Chatbot UI (/chat)
+│   ├── index.html                   # Security Operations & Admin Suite (/)
+│   ├── css/
+│   │   └── style.css                # Global design system & animations
+│   └── js/
+│       ├── app.js                   # SPA router, API health checks & particles
+│       ├── chat.js                  # Chat controller, 1,000-char counter & alert cards
+│       ├── scanner.js               # Diagnostic scanner (up to 50,000 chars)
+│       ├── dashboard.js             # Live analytics & D3 world threat map
+│       └── ledger.js                # Paginated audit log & CSV export
+│
+├── data/                            # Training & benchmark datasets (CSV)
+├── docs/                            # Documentation & presentations
+│   ├── AI_Firewall_Presentation.docx
+│   └── PROJECT_STRUCTURE.md         # Detailed component architecture guide
+└── images/                          # Screenshots & UI previews
+```
 
 ---
 

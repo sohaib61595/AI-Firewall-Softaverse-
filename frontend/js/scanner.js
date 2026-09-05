@@ -96,13 +96,13 @@ if (voiceBtn) {
 // Char counter
 promptInput.addEventListener('input', () => {
   const len = promptInput.value.length;
-  charCounter.textContent = `${len} / 5000`;
-  charCounter.style.color = len > 4500 ? 'var(--warning)' : '';
+  charCounter.textContent = `${len} / 50000`;
+  charCounter.style.color = len > 45000 ? 'var(--warning)' : '';
 });
 
 clearBtn.addEventListener('click', () => {
   promptInput.value = '';
-  charCounter.textContent = '0 / 5000';
+  charCounter.textContent = '0 / 50000';
   showState('idle');
 });
 

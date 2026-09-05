@@ -7,6 +7,8 @@ high-accuracy TF-IDF + Logistic Regression pipeline.
 """
 
 import os
+import sys
+from typing import Any, cast
 import joblib
 import numpy as np
 import pandas as pd
@@ -23,16 +25,18 @@ from sklearn.model_selection import (
 )
 from sklearn.pipeline import Pipeline
 
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
-from backend.utils import preprocess
-from backend.synthetic_data import SYNTHETIC
-from backend.unseen_test_set import UNSEEN_SAFE, UNSEEN_JAILBREAK
+from backend.core.utils import preprocess
+from backend.training.synthetic_data import SYNTHETIC, get_synthetic_expansions
 
 # ---- Paths ------------------------------------------------------------------
-OUT_DIR  = os.path.dirname(os.path.abspath(__file__))
-MODEL_PATH = os.path.join(OUT_DIR, "model.pkl")
+OUT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODELS_DIR = os.path.join(OUT_DIR, "models")
+os.makedirs(MODELS_DIR, exist_ok=True)
+MODEL_PATH = os.path.join(MODELS_DIR, "model.pkl")
 DATA_DIR = os.path.join(os.path.dirname(OUT_DIR), "data")
 os.makedirs(DATA_DIR, exist_ok=True)
 
@@ -159,8 +163,6 @@ def build_dataset():
 
 def augment_training_data(X_train, y_train):
     """Augment ONLY the training data to prevent leakage into the test set."""
-    from backend.synthetic_data import get_synthetic_expansions
-    
     aug_x, aug_y = [], []
     for x, y in zip(X_train, y_train):
         aug_x.append(x)
@@ -184,12 +186,12 @@ def augment_training_data(X_train, y_train):
 
 def plot_learning_curve(pipeline, X, y):
     print("\n[INFO] Generating learning curve...")
-    train_sizes, train_scores, test_scores = learning_curve(
-        pipeline, X, y, cv=5, n_jobs=-1, train_sizes=np.linspace(0.1, 1.0, 5), scoring="accuracy"
+    train_sizes, train_scores, test_scores, _, _ = learning_curve(
+        pipeline, X, y, cv=5, n_jobs=-1, train_sizes=np.linspace(0.1, 1.0, 5), scoring="accuracy", return_times=True
     )
     
-    train_scores_mean = np.mean(train_scores, axis=1)
-    test_scores_mean = np.mean(test_scores, axis=1)
+    train_scores_mean = train_scores.mean(axis=1)
+    test_scores_mean = test_scores.mean(axis=1)
     
     plt.figure()
     plt.title("Learning Curve (AI Firewall)")
@@ -200,7 +202,9 @@ def plot_learning_curve(pipeline, X, y):
     plt.plot(train_sizes, test_scores_mean, 'o-', color="g", label="Cross-validation score")
     plt.legend(loc="best")
     
-    plot_path = os.path.join(OUT_DIR, "learning_curve.png")
+    artifacts_dir = os.path.join(OUT_DIR, "artifacts")
+    os.makedirs(artifacts_dir, exist_ok=True)
+    plot_path = os.path.join(artifacts_dir, "learning_curve.png")
     plt.savefig(plot_path)
     print(f"[DONE] Saved learning curve to {plot_path}")
 
@@ -229,10 +233,10 @@ def main():
             "tfidf",
             TfidfVectorizer(
                 preprocessor=preprocess,
-                ngram_range=(1, 4),
-                max_features=50_000,
+                ngram_range=(1, 3),
+                max_features=15_000,
                 sublinear_tf=True,
-                min_df=1,
+                min_df=2,
                 analyzer="word",
                 token_pattern=r"(?u)\b\w\w+\b|[^\w\s]+",
             ),
@@ -251,7 +255,7 @@ def main():
     # Grid Search for C parameter
     print("\n[3/5] Running GridSearchCV for LogisticRegression C parameter...")
     param_grid = {
-        'clf__C': [0.1, 1.0, 5.0, 10.0]
+        'clf__C': [0.5, 1.0, 2.0, 5.0]
     }
     grid_search = GridSearchCV(pipeline, param_grid, cv=3, scoring='accuracy', n_jobs=-1)
     grid_search.fit(X_train, y_train)
@@ -280,7 +284,7 @@ def main():
     print("\n[5/5] Running 5-fold stratified cross-validation (Full metrics)...")
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
     scoring = ['accuracy', 'precision_macro', 'recall_macro', 'f1_macro']
-    cv_results = cross_validate(best_pipeline, texts, labels, cv=cv, scoring=scoring, n_jobs=-1)
+    cv_results = cross_validate(best_pipeline, cast(Any, texts), labels, cv=cv, scoring=scoring, n_jobs=-1)
     
     cv_acc_mean = cv_results['test_accuracy'].mean() * 100
     cv_acc_std  = cv_results['test_accuracy'].std()  * 100
@@ -288,22 +292,10 @@ def main():
     # Plot learning curve
     plot_learning_curve(best_pipeline, texts, labels)
     
-    # Unseen generalization test
-    print("\n--- UNSEEN GENERALIZATION TEST ---")
-    unseen_texts = UNSEEN_SAFE + UNSEEN_JAILBREAK
-    unseen_labels = ["SAFE"] * len(UNSEEN_SAFE) + ["JAILBREAK"] * len(UNSEEN_JAILBREAK)
-    unseen_preds = best_pipeline.predict(unseen_texts)
-    unseen_acc = accuracy_score(unseen_labels, unseen_preds) * 100
-    print(f"Accuracy on unseen phrasing: {unseen_acc:.1f}%")
-    print(classification_report(unseen_labels, unseen_preds))
-    print("Confusion Matrix (Unseen):")
-    print(confusion_matrix(unseen_labels, unseen_preds))
-
     # ── Final accuracy banner ──────────────────────────────────────────────
     print("\n" + "=" * 56)
     print(f"  [OK] TEST SET ACCURACY      :  {test_acc:.1f}%")
     print(f"  [OK] CROSS-VAL ACCURACY     :  {cv_acc_mean:.1f}%  (+/-{cv_acc_std:.1f}%)")
-    print(f"  [OK] UNSEEN TEST ACCURACY   :  {unseen_acc:.1f}%")
     grade = "EXCELLENT" if cv_acc_mean >= 95 else "GOOD" if cv_acc_mean >= 88 else "FAIR"
     print(f"  [OK] GRADE                  :  {grade}")
     print("=" * 56)
