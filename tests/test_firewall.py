@@ -68,7 +68,7 @@ def test_scan_endpoint_blocked(client):
 
 
 def test_chat_endpoint_safe(client):
-    response = client.post("/api/chat", json={"session_id": "test_sess_1", "message": "Hello, who are you?"})
+    response = client.post("/api/chat", json={"session_id": "test_sess_1", "message": "Tell me a joke about cats."})
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "success"

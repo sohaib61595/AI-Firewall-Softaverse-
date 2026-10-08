@@ -170,8 +170,6 @@ def augment_training_data(X_train, y_train):
         if y not in ("SAFE",):
             aug_x.append(x + " Please do this immediately.")
             aug_y.append(y)
-            aug_x.append(x + " This is very important.")
-            aug_y.append(y)
             
     # Add combinatorial expansions here to ensure they never leak into X_test
     print("   [INFO] Adding combinatorial synthetic data to training set...")
@@ -233,10 +231,10 @@ def main():
             "tfidf",
             TfidfVectorizer(
                 preprocessor=preprocess,
-                ngram_range=(1, 3),
-                max_features=15_000,
+                ngram_range=(1, 2),
+                max_features=10_000,
                 sublinear_tf=True,
-                min_df=2,
+                min_df=3,
                 analyzer="word",
                 token_pattern=r"(?u)\b\w\w+\b|[^\w\s]+",
             ),
@@ -252,10 +250,10 @@ def main():
         ),
     ])
     
-    # Grid Search for C parameter
+    # Grid Search for C parameter (testing stronger regularization values to prevent overfitting)
     print("\n[3/5] Running GridSearchCV for LogisticRegression C parameter...")
     param_grid = {
-        'clf__C': [0.5, 1.0, 2.0, 5.0]
+        'clf__C': [0.1, 0.5, 1.0, 2.0]
     }
     grid_search = GridSearchCV(pipeline, param_grid, cv=3, scoring='accuracy', n_jobs=-1)
     grid_search.fit(X_train, y_train)
